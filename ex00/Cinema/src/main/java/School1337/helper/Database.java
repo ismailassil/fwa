@@ -46,8 +46,6 @@ public class Database {
     static public boolean insertNewUser(Properties properties) {
         String firstName, lastName, phoneNumber, email, password, loginIp;
 
-        System.out.println("Here 1");
-
         firstName = properties.getProperty("firstName");
         lastName = properties.getProperty("lastName");
         phoneNumber = properties.getProperty("phoneNumber");
@@ -55,22 +53,14 @@ public class Database {
         password = properties.getProperty("password");
         loginIp = properties.getProperty("loginIp");
 
-        System.out.println("Here 11");
         if (isUserExists(email, password))
             return false;
-        System.out.println("Here 21");
         try {
-            System.out.println("Here 31");
-
             Class.forName(DRIVER);
-
-            System.out.println("Here 41");
 
             try( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
                  PreparedStatement statement = connection.prepareStatement(insertUserQuery);
                  PreparedStatement logStatement = connection.prepareStatement(insertLoginQuery)) {
-
-                System.out.println("Here 51");
 
                 statement.setString(1, firstName);
                 statement.setString(2, lastName);
