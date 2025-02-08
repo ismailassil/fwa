@@ -4,10 +4,8 @@ import School1337.helper.Database;
 import School1337.helper.LoginRecord;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,8 +14,6 @@ import java.util.Properties;
 
 @WebServlet(name = "profileServlet", urlPatterns = "/profile")
 public class ProfileServlet extends HttpServlet {
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) {}
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         HttpSession session = request.getSession();
@@ -36,7 +32,7 @@ public class ProfileServlet extends HttpServlet {
         request.setAttribute("fullName", properties.getProperty("fullName"));
         List<String> loginDates = Arrays.asList(properties.getProperty("login_dates").split(","));
         List<String> loginTimes = Arrays.asList(properties.getProperty("login_times").split(","));
-        List<String> loginIps = Arrays.asList(properties.getProperty("login_ip").split(","));
+        List<String> loginIps = Arrays.asList(properties.getProperty("login_ips").split(","));
 
         int size = loginDates.size();
         if (loginTimes.size() != size || loginIps.size() != size) {
@@ -48,7 +44,7 @@ public class ProfileServlet extends HttpServlet {
             loginHistory.add(new LoginRecord(loginDates.get(i), loginTimes.get(i), loginIps.get(i)));
         }
 
-        request.setAttribute("lastLoginDate", loginHistory);
+        request.setAttribute("loginHistory", loginHistory);
 
         if (properties.getProperty("profileImage") != null)
             request.setAttribute("profileImage", properties.getProperty("profileImage"));

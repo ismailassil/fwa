@@ -45,10 +45,22 @@ public class SignUpServlet extends HttpServlet {
         properties.setProperty("phoneNumber", phoneNumber);
         properties.setProperty("email", email);
         properties.setProperty("password", password);
-        properties.setProperty("login_ip", request.getRemoteAddr());
+
+        // GET THE IP ADDRESS OF THE CLIENT
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty()) {
+            ipAddress = request.getRemoteAddr();
+        }
+        if (ipAddress != null && ipAddress.contains(",")) {
+            ipAddress = ipAddress.split(",")[0].trim();
+            if (ipAddress.equals("0:0:0:0:0:0:0:1")) {
+                ipAddress = "localhost";
+            }
+        }
+        properties.setProperty("loginIp", ipAddress);
 
         if (!Database.insertNewUser(properties)) {
-            request.setAttribute("error", "Error");
+            request.setAttribute("error", "Maybe the User already Exists or NOT");
             doGet(request, response);
         }
 

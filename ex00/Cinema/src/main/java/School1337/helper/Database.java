@@ -12,7 +12,9 @@ public class Database {
     private static final String PASSWORD = "iassil";
     private static final String DRIVER = "org.mariadb.jdbc.Driver";
     private static final String checkForUserQuery = "SELECT password FROM users WHERE email = ?";
+    private static final String getUserId = "SELECT id FROM users WHERE email = ?";
     private static final String getUserDataQuery = "SELECT * FROM users WHERE email = ?";
+    private static final String insertFileQuery = "INSERT INTO upload_history (user_id, file_name, file_type, file_data) VALUES (?, ?, ?, ?)";
     private static final String insertUserQuery = "INSERT INTO users (firstName, lastName, phoneNumber, email, password, image) VALUES (?, ?, ?, ?, ?, ?)";
     private static final String getUserLoginQuery = "SELECT * FROM logins_history WHERE user_id = ? ORDER BY login_time DESC";
     private static final String insertLoginQuery = "INSERT INTO logins_history (user_id, login_ip) VALUES (?, ?)";
@@ -59,7 +61,7 @@ public class Database {
             Class.forName(DRIVER);
 
             try( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
-                 PreparedStatement statement = connection.prepareStatement(insertUserQuery);
+                 PreparedStatement statement = connection.prepareStatement(insertUserQuery, Statement.RETURN_GENERATED_KEYS);
                  PreparedStatement logStatement = connection.prepareStatement(insertLoginQuery)) {
 
                 statement.setString(1, firstName);
@@ -74,22 +76,22 @@ public class Database {
                     throw new RuntimeException("Image file not found");
                 }
 
-                try (FileInputStream inputStream = new FileInputStream(imageFile)) {
-                    statement.setBinaryStream(6, inputStream, (int) imageFile.length());
+                byte[] imageBytes;
+                try (FileInputStream fis = new FileInputStream(imageFile)) {
+                    imageBytes = fis.readAllBytes();
                 }
+                ByteArrayInputStream inputStream = new ByteArrayInputStream(imageBytes);
+                statement.setBinaryStream(6, inputStream, imageBytes.length);
 
                 int affected = statement.executeUpdate();
                 if (affected > 0) {
                     try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
                         if (generatedKeys.next()) {
                             int userId = generatedKeys.getInt(1);
-                            int logAffected = 0;
-                            if (loginIp != null && !loginIp.isEmpty()) {
-                                logStatement.setString(1, String.valueOf(userId));
-                                logStatement.setString(2, loginIp);
-                                logAffected = logStatement.executeUpdate();
-                            }
-                            return logAffected > 0;
+                            logStatement.setString(1, String.valueOf(userId));
+                            logStatement.setString(2, loginIp);
+                            logStatement.executeUpdate();
+                            return true;
                         }
                     }
                 }
@@ -174,6 +176,40 @@ public class Database {
         }
 
         return properties;
+    }
+
+    static public boolean insertImage(Properties properties, InputStream file_data) {
+        String file_name = properties.getProperty("file_name");
+        String file_type = properties.getProperty("file_type");
+        String user_email = properties.getProperty("email");
+
+        try {
+            Class.forName(DRIVER);
+
+            try ( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+                  PreparedStatement statement = connection.prepareStatement(getUserId);
+                  PreparedStatement fileStatement = connection.prepareStatement(insertFileQuery)) {
+
+                statement.setString(1, user_email);
+                ResultSet resultSet = statement.executeQuery();
+                if (resultSet.next()) {
+                    fileStatement.setInt(1, resultSet.getInt("id"));
+                    fileStatement.setString(2, file_name);
+                    fileStatement.setString(3, file_type);
+                    fileStatement.setBlob(4, file_data);
+
+                    int rows = fileStatement.executeUpdate();
+                    return rows > 0;
+                }
+            }
+            return false;
+        } catch (ClassNotFoundException e) {
+            System.out.println("JDBC Driver not found");
+            throw new RuntimeException("Database Driver Loading Failed", e);
+        } catch (SQLException e) {
+            System.out.println("Database connection failed: " + e.getMessage());
+            throw new RuntimeException("Database connection failed", e);
+        }
     }
 }
 

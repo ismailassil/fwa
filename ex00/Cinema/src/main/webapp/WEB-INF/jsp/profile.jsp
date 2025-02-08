@@ -1,4 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
+<%@ page import="School1337.helper.LoginRecord" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="School1337.helper.FileRecord" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,18 +69,29 @@
 
   <h3>Last Login Dates</h3>
   <table>
+    <thead>
     <tr>
       <th>Date</th>
       <th>Time</th>
-      <th>IP</th>
+      <th>IP Address</th>
     </tr>
-    <c:forEach var="file" items="${lastLoginDate}">
-      <tr>
-        <td>${file.date}</td>
-        <td>${file.time}</td>
-        <td>${file.ip}</td>
-      </tr>
-    </c:forEach>
+    </thead>
+    <tbody>
+    <tr>
+    <%
+      List<LoginRecord> loginHistory = (ArrayList<LoginRecord>) request.getAttribute("loginHistory");
+      if (loginHistory != null) {
+        for (LoginRecord login : loginHistory) {
+    %>
+      <td><%= login.getDate() %></td>
+      <td><%= login.getTime() %></td>
+      <td><%= login.getIp() %></td>
+    <%
+        }
+      }
+    %>
+    </tr>
+    </tbody>
   </table>
 
   <form action="/profile" method="post" enctype="multipart/form-data">
@@ -90,18 +105,31 @@
 
   <h3>Upload History</h3>
   <table>
-    <tr>
-      <th>Filename</th>
-      <th>Size</th>
-      <th>Type</th>
-    </tr>
-    <c:forEach var="file" items="${uploadedFiles}">
+    <thead>
       <tr>
-        <td>${file.name}</td>
-        <td>${file.size} KB</td>
-        <td>${file.type}</td>
+        <th>Filename</th>
+        <th>Size</th>
+        <th>Type</th>
       </tr>
-    </c:forEach>
+    </thead>
+    <tbody>
+    <tr>
+    <%
+      List<FileRecord> imageHistory = (ArrayList<FileRecord>) request.getAttribute("imageHistory");
+      if (imageHistory != null) {
+        for (FileRecord image : imageHistory) {
+    %>
+
+      <td><%= image.getFileName() %></td>
+      <td><%= image.getSize() %></td>
+      <td><%= image.getMime() %></td>
+
+    <%
+        }
+      }
+    %>
+    </tr>
+    </tbody>
   </table>
 </div>
 </body>
