@@ -7,9 +7,26 @@ import java.sql.*;
 import java.util.*;
 
 public class Database {
-    private static final String URL = "jdbc:mariadb://localhost:3306/DataDB";
-    private static final String USERNAME = "iassil";
-    private static final String PASSWORD = "iassil";
+    private static final String URL;
+    private static final String USERNAME;
+    private static final String PASSWORD;
+    private static final Properties propertyApplication = new Properties();
+    static {
+        try (InputStream stream = Database.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (stream == null) {
+                throw new RuntimeException("application.properties not found");
+            } else {
+                propertyApplication.load(stream);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        URL = (String) propertyApplication.get("db.url");
+        USERNAME = (String) propertyApplication.get("db.user");
+        PASSWORD = (String) propertyApplication.get("db.password");
+        if (URL.isEmpty() || USERNAME.isEmpty() || PASSWORD.isEmpty())
+            throw new RuntimeException("Element is not set");
+    }
     private static final String DRIVER = "org.mariadb.jdbc.Driver";
     private static final String checkForUserQuery = "SELECT password FROM users WHERE email = ?";
     private static final String getUserId = "SELECT id FROM users WHERE email = ?";
