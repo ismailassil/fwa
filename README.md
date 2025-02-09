@@ -40,4 +40,4 @@ FWA is a Java web application focusing on servlets, authentication, and user man
 ![SignUp Page](images/SignUp.jpeg)
 ![Profile Page](images/Profile.jpeg)
 ![Image Link](images/Image_from_db.jpeg)
-![Databases](images/databases.jpeg)
+![Databases](images/databases.png)
