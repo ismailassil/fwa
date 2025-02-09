@@ -14,10 +14,13 @@ public class Database {
     private static final String checkForUserQuery = "SELECT password FROM users WHERE email = ?";
     private static final String getUserId = "SELECT id FROM users WHERE email = ?";
     private static final String getUserDataQuery = "SELECT * FROM users WHERE email = ?";
-    private static final String insertFileQuery = "INSERT INTO upload_history (user_id, file_name, file_type, file_data) VALUES (?, ?, ?, ?)";
+    private static final String insertFileQuery = "INSERT INTO upload_history (user_id, file_name, file_type, file_size, file_data) VALUES (?, ?, ?, ?, ?)";
+    private static final String insertImageQuery = "UPDATE users SET image = ? WHERE id = ?";
     private static final String insertUserQuery = "INSERT INTO users (firstName, lastName, phoneNumber, email, password, image) VALUES (?, ?, ?, ?, ?, ?)";
     private static final String getUserLoginQuery = "SELECT * FROM logins_history WHERE user_id = ? ORDER BY login_time DESC";
     private static final String insertLoginQuery = "INSERT INTO logins_history (user_id, login_ip) VALUES (?, ?)";
+    private static final String getUserImageQuery = "SELECT * FROM upload_history WHERE user_id = ? ORDER BY file_name DESC";
+    private static final String getUserImageNameQuery = "SELECT * FROM upload_history WHERE user_id = ? AND file_name = ?";
     private static final String defaultImage = "/home/iassil/fwa/ex00/Cinema/src/main/webapp/images/default.jpg";
 
     static public boolean isUserExists(String email, String password) {
@@ -117,7 +120,8 @@ public class Database {
 
             try ( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
             PreparedStatement statement = connection.prepareStatement(getUserDataQuery);
-            PreparedStatement logStatement = connection.prepareStatement(getUserLoginQuery)) {
+            PreparedStatement logStatement = connection.prepareStatement(getUserLoginQuery);
+            PreparedStatement imageStatement = connection.prepareStatement(getUserImageQuery)) {
 
                 statement.setString(1, email);
                 ResultSet resultSet = statement.executeQuery();
@@ -128,7 +132,9 @@ public class Database {
 
                     int userId = resultSet.getInt("id");
                     logStatement.setInt(1, userId);
+                    imageStatement.setInt(1, userId);
                     ResultSet logResultSet = logStatement.executeQuery();
+                    ResultSet imageResultSet = imageStatement.executeQuery();
 
                     List<String> loginDates = new ArrayList<>();
                     List<String> loginTimes = new ArrayList<>();
@@ -143,14 +149,31 @@ public class Database {
                         }
                     }
 
+                    List<String> imagesName = new ArrayList<>();
+                    List<String> imagesType = new ArrayList<>();
+                    List<String> imagesSize = new ArrayList<>();
+
+                    while (imageResultSet.next()) {
+                        imagesName.add(imageResultSet.getString("file_name"));
+                        imagesType.add("image/" + imageResultSet.getString("file_type"));
+                        imagesSize.add(imageResultSet.getString("file_size"));
+                    }
+
                     String loginDatesString = String.join(",", loginDates);
                     String loginTimesString = String.join(",", loginTimes);
                     String loginIpsString = String.join(",", loginIps);
 
+                    String imagesNameString = String.join(",", imagesName);
+                    String imagesTypeString = String.join(",", imagesType);
+                    String imagesSizeString = String.join(",", imagesSize);
 
                     properties.setProperty("login_dates", loginDatesString);
                     properties.setProperty("login_times", loginTimesString);
                     properties.setProperty("login_ips", loginIpsString);
+
+                    properties.setProperty("images_name", imagesNameString);
+                    properties.setProperty("images_type", imagesTypeString);
+                    properties.setProperty("images_size", imagesSizeString);
 
                     InputStream imageInputStream = resultSet.getBinaryStream("image");
 
@@ -178,28 +201,48 @@ public class Database {
         return properties;
     }
 
-    static public boolean insertImage(Properties properties, InputStream file_data) {
+    static public boolean insertImage(Properties properties, InputStream file_data) throws IOException {
         String file_name = properties.getProperty("file_name");
         String file_type = properties.getProperty("file_type");
+        String file_size = properties.getProperty("file_size");
         String user_email = properties.getProperty("email");
+
+        byte[] fileBytes = file_data.readAllBytes();
 
         try {
             Class.forName(DRIVER);
 
-            try ( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
-                  PreparedStatement statement = connection.prepareStatement(getUserId);
-                  PreparedStatement fileStatement = connection.prepareStatement(insertFileQuery)) {
+            try (Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+                 PreparedStatement statement = connection.prepareStatement(getUserId);
+                 PreparedStatement imageStatement = connection.prepareStatement(insertImageQuery);
+                 PreparedStatement fileStatement = connection.prepareStatement(insertFileQuery)) {
+
+                connection.setAutoCommit(false);
 
                 statement.setString(1, user_email);
-                ResultSet resultSet = statement.executeQuery();
-                if (resultSet.next()) {
-                    fileStatement.setInt(1, resultSet.getInt("id"));
-                    fileStatement.setString(2, file_name);
-                    fileStatement.setString(3, file_type);
-                    fileStatement.setBlob(4, file_data);
+                try {
+                    ResultSet resultSet = statement.executeQuery();
+                    if (resultSet.next()) {
+                        int user_id = resultSet.getInt("id");
+                        imageStatement.setBlob(1, new ByteArrayInputStream(fileBytes));
+                        imageStatement.setInt(2, user_id);
+                        imageStatement.executeUpdate();
 
-                    int rows = fileStatement.executeUpdate();
-                    return rows > 0;
+                        fileStatement.setInt(1, user_id);
+                        fileStatement.setString(2, file_name);
+                        fileStatement.setString(3, file_type);
+                        fileStatement.setString(4, file_size);
+                        fileStatement.setBlob(5, new ByteArrayInputStream(fileBytes));
+                        fileStatement.executeUpdate();
+
+                        connection.commit();
+                        return true;
+                    }
+                } catch (Exception e) {
+                    connection.rollback();
+                    throw e;
+                } finally {
+                    connection.setAutoCommit(true);
                 }
             }
             return false;
@@ -210,6 +253,54 @@ public class Database {
             System.out.println("Database connection failed: " + e.getMessage());
             throw new RuntimeException("Database connection failed", e);
         }
+    }
+
+    static public Properties getImage(String email, String fileName) throws SQLException, ClassNotFoundException {
+        Properties properties = new Properties();
+        properties.setProperty("status", "0");
+
+        try {
+            Class.forName(DRIVER);
+
+            try ( Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+                  PreparedStatement userStatement = connection.prepareStatement(getUserId);
+                  PreparedStatement statement = connection.prepareStatement(getUserImageNameQuery)) {
+                userStatement.setString(1, email);
+
+                ResultSet resultSet = userStatement.executeQuery();
+                if (!resultSet.next()) {
+                    properties.setProperty("status", "2");
+                    return properties;
+                }
+                int userId = resultSet.getInt("id");
+
+                statement.setInt(1, userId);
+                statement.setString(2, fileName);
+
+                ResultSet resultSet1 = statement.executeQuery();
+                if (!resultSet1.next()) {
+                    properties.setProperty("status", "1");
+                    return properties;
+                }
+
+                try (InputStream imageStream = resultSet1.getBinaryStream("file_data")) {
+                    if (imageStream == null) {
+                        properties.setProperty("status", "2");
+                        System.out.println("Image `" + fileName + "` not found");
+                    } else {
+                        properties.setProperty("file_type", resultSet1.getString("file_type"));
+                        byte[] streamByte = imageStream.readAllBytes();
+                        String ImageToBase64 = Base64.getEncoder().encodeToString(streamByte);
+                        properties.setProperty("file_data", ImageToBase64);
+                    }
+
+                }
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return properties;
     }
 }
 

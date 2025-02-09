@@ -1,7 +1,9 @@
 package School1337.servlets;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 
 import School1337.helper.Database;
@@ -17,7 +19,7 @@ import jakarta.servlet.annotation.*;
 )
 public class FileUpload extends HttpServlet {
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         HttpSession session = request.getSession();
         String email = (String) session.getAttribute("email");
 
@@ -30,16 +32,34 @@ public class FileUpload extends HttpServlet {
 
             String fileName = filePart.getSubmittedFileName();
             String fileType = fileName.substring(fileName.lastIndexOf(".") + 1);
+            List<String> fileTypes = Arrays.asList("jpg", "jpeg", "png", "gif", "svg", "tiff");
+            boolean isExist = false;
+            for (String type : fileTypes) {
+                if (type.equals(fileType)) {
+                    isExist = true;
+                    break;
+                }
+            }
+            if (!isExist)
+                continue;
+            double fileSize = filePart.getSize();
+            fileSize = fileSize / 1024 / 1024;
             InputStream fileStream = filePart.getInputStream();
+
+            fileName = fileName.substring(0, fileName.lastIndexOf("."));
 
             Properties properties = new Properties();
             properties.setProperty("file_name", fileName);
-            properties.setProperty("file_type", fileType);
+            properties.setProperty("file_type", fileType.toLowerCase().trim());
+            properties.setProperty("file_size", String.format("%.2f", fileSize) + " MB");
             properties.setProperty("email", email);
 
             if (!Database.insertImage(properties, fileStream))
-                System.out.println("Upload failed " + fileName);
+                request.setAttribute("upload_status", "Upload Failed! " + fileName);
+            else
+                request.setAttribute("upload_status", fileName + " uploaded successfully");
         }
+        response.sendRedirect("/profile");
 
     }
 }

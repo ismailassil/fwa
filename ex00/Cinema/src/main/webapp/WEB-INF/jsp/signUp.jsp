@@ -32,7 +32,7 @@
       border-radius: 4px;
       box-sizing: border-box;
     }
-    input[type="submit"] {
+    input[type="submit"], button {
       width: 100%;
       padding: 10px;
       background-color: #4CAF50;
@@ -48,7 +48,9 @@
 </head>
 <body>
 <div class="container">
-<h2>Signup</h2>
+  <button onclick="window.location.href='/'">Home</button>
+
+  <h2>Sign Up</h2>
 <p>${error}</p>
 <form action="/signUp" method="post">
   <label for="firstName">First Name:</label><br>

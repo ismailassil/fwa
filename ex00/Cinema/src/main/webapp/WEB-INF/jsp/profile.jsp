@@ -62,6 +62,7 @@
 </head>
 <body>
 <div class="profile-container">
+  <p style="color: orange">${upload_status}</p>
   <h2>User Profile</h2>
   <img src="data:image/jpeg;base64,${profileImage}" alt="Profile Picture">
   <p align="left"><strong>FullName:</strong> ${fullName}</p>
@@ -83,9 +84,11 @@
       if (loginHistory != null) {
         for (LoginRecord login : loginHistory) {
     %>
+    <tr>
       <td><%= login.getDate() %></td>
       <td><%= login.getTime() %></td>
       <td><%= login.getIp() %></td>
+    </tr>
     <%
         }
       }
@@ -94,8 +97,8 @@
     </tbody>
   </table>
 
-  <form action="/profile" method="post" enctype="multipart/form-data">
-    <input type="file" name="profilePicture" accept="image/*" required>
+  <form action="/fileUpload" method="post" enctype="multipart/form-data">
+    <input type="file" name="profilePicture[]" accept="image/*" required multiple>
     <button type="submit">Upload New Picture</button>
   </form>
 
@@ -113,22 +116,24 @@
       </tr>
     </thead>
     <tbody>
-    <tr>
     <%
       List<FileRecord> imageHistory = (ArrayList<FileRecord>) request.getAttribute("imageHistory");
       if (imageHistory != null) {
         for (FileRecord image : imageHistory) {
     %>
-
-      <td><%= image.getFileName() %></td>
+    <tr>
+      <td>
+        <a href="" onclick="window.open('image?filename=<%=image.getFileName()%>', '_blank')">
+          <%= image.getFileName() %>
+        </a>
+      </td>
       <td><%= image.getSize() %></td>
       <td><%= image.getMime() %></td>
-
+    </tr>
     <%
         }
       }
     %>
-    </tr>
     </tbody>
   </table>
 </div>

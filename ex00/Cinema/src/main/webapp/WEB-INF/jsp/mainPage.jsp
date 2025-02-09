@@ -42,7 +42,7 @@
 <body>
 <div class="container">
     <button class="login" onclick="window.location.href='/signIn';">Login</button>
-    <button class="signup" onclick="window.location.href='/signUp';">Signup</button>
+    <button class="signup" onclick="window.location.href='/signUp';">Sign Up</button>
 </div>
 </body>
 </html>

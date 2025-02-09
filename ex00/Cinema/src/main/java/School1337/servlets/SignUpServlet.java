@@ -53,9 +53,9 @@ public class SignUpServlet extends HttpServlet {
         }
         if (ipAddress != null && ipAddress.contains(",")) {
             ipAddress = ipAddress.split(",")[0].trim();
-            if (ipAddress.equals("0:0:0:0:0:0:0:1")) {
-                ipAddress = "localhost";
-            }
+        }
+        if (ipAddress != null && ipAddress.equals("0:0:0:0:0:0:0:1")) {
+            ipAddress = "localhost";
         }
         properties.setProperty("loginIp", ipAddress);
 
